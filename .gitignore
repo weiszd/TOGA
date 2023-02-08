@@ -93,3 +93,8 @@ data_science/
 .Rproj.user
 
 defect_visualization/geneLossPipeOutput
+build/
+test/
+bin/
+*.sif
+#singularity/
