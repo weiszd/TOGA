@@ -412,7 +412,7 @@ def parse_args():
         "--m_f10p",
         action="store_true",
         dest="mask_all_first_10p",
-        help="Automatically mask all inactivating mutations in first 10% of "
+        help="Automatically mask all inactivating mutations in first 10 percent of "
              "the reading frame, ignoring ATG codons distribution."
     )
 
@@ -1845,11 +1845,15 @@ def extract_codon_data(codon_table, excl_exons=None):
                 que_subcodons = [GAP_CODON for x in range(len(ref_subcodons))]
                 t_codons.extend(ref_subcodons)
                 q_codons.extend(que_subcodons)
+            elif ref_codon == "-" or ref_codon == "--":
+                # special case to be captured Apr 2023
+                t_codons.append(GAP_CODON)
+                q_codons.append(XXX_CODON)
             else:
                 # something strange
                 ref_int = check_codon(ref_codon[-3:])
-                t_codons.extend(ref_int)
-                q_codons.extend(GAP_CODON)
+                t_codons.append(ref_int)
+                q_codons.append(GAP_CODON)
 
             if this_exon_to_del:
                 prev_exon_was_del = True
