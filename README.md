@@ -2,7 +2,7 @@
 
 ![TOGA logo](https://github.com/hillerlab/TOGA/blob/master/supply/logo.png)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-![version](https://img.shields.io/badge/version-1.1.0-blue)
+![version](https://img.shields.io/badge/version-1.1.3-blue)
 [![DOI](https://zenodo.org/badge/277817661.svg)](https://zenodo.org/badge/latestdoi/277817661)
 
 TOGA is a new method that integrates gene annotation, inferring orthologs and classifying
@@ -14,12 +14,14 @@ related species and to accurately distinguish orthologs from paralogs or process
 This tutorial explains how to get started using TOGA.
 It shows how to install and execute TOGA, and how to handle possible issues that may occur.
 
-[TOGA changelog](https://github.com/hillerlab/TOGA/blob/master/VersionHistory.md)
+For more details, please check out the [TOGA wiki](https://github.com/hillerlab/TOGA/wiki).
+
+[Changelog](https://github.com/hillerlab/TOGA/blob/master/VersionHistory.md).
 
 ## Installation
 
-TOGA supports both Linux and MacOS systems.
-The package was properly tested on Python version 3.6.5. and 3.7.3.
+TOGA is compatible with Linux and MacOS, including M1-based systems.
+It has been tested and verified to work with Python versions 3.9 and higher.
 
 It is highly recommended to have access to computational cluster, but
 for small or partial genomes with short genes a desktop PC will be enough.
@@ -566,6 +568,55 @@ provide the chain of interest with --chain parameter:
 ```shell
 /supply/plot_mutations.py ${REFERENCE_BED_FILE} ${PROJECT_DIR}/inact_mut_data.hdf5 ENST0000011111 test.svg --chain 222
 ```
+
+## Getting assembly quality statistics
+
+TOGA also provides a powerful way to benchmark assembly completeness and quality. TOGA’s gene classification explicitly distinguishes between genes with missing sequences (indicative of assembly incompleteness) and genes with inactivating mutations (an excess of genes with inactivating mutations indicates a higher base error rate). We used a set of 18430 ancestral placental mammal genes (file is [here](https://github.com/hillerlab/TOGA/blob/master/TOGAInput/human_hg38/Ancestral_placental.txt)) to compute assembly quality statistics, as illustrated previously for the [vampire bat](https://www.science.org/doi/10.1126/sciadv.abm6494) or [Rhinolophid bat](https://europepmc.org/article/ppr/ppr616538) genomes.  
+
+To use TOGA to benchmark assembly quality, use the "supply/TOGA_assemblyStats.py" script. This script produces a TSV file with a summary of the number of genes that are intact (classified as I), having missing sequence (TOGA status PI, M, PM, PG, or absent) or inactivating mutations (L and UL). The script will also generate a PDF image of a stacked plot of the statistics (used in Figure 1 in our previous studies). The two output files will be named respectively ${TOGA_DIRS_FILE}\_stats.tsv and ${TOGA_DIRS_FILE}\_statsplot.pdf
+
+The input is a text file listing the names of the TOGA directories. Each directory must contain the loss_summ_data.tsv output file. 
+
+Use this command to consider all genes.
+```shell
+./TOGA_assemblyStats.py ${TOGA_DIRS_FILE} -m stats
+```
+
+You can restrict the statistics to a subset of genes (for example, the Placental ancestral gene set in "./TOGAInput/human_hg38/Ancestral_placental.txt") by providing the -ances/--ancestral parameter with the path to the file listing them like this:
+```shell
+./TOGA_assemblyStats.py ${TOGA_DIRS_FILE} -m stats -ances ./TOGAInput/human_hg38/Ancestral_placental.txt
+```
+
+If you want the script to provide the details of all the classes, without grouping for example L and UL under "genes with inactivating mutations", simply add the -d/--detailed flag.
+
+If you want to change the names of the TOGA directories to something more meaningful (e.g. instead of "vs_speNam" listing the species common or latin name), you can provide a TSV file mapping the names listed in the ${TOGA_DIRS_FILE} to new ones with the -aN/--assemblyNames parameter like this:
+```shell
+./TOGA_assemblyStats.py ${TOGA_DIRS_FILE} -m stats -ances ./TOGAInput/human_hg38/Ancestral_placental.txt -aN ${NAME_MAP_FILE}
+```
+
+#### Assembly statistics for haplotype resolved assemblies
+
+If you have multiple assemblies of the same species, or you have haplotype-resolved assemblies, where e.g. sex chromosomes are only contained in one assembly, 
+you may want to combine the results to get a more accurate view. For example, X-linked genes will be deemed missing (M) by TOGA in the Haplotype with Y-chromosome.
+Similarly, in case of a polymorphic frameshift or a base error, a gene may be classified as 'uncertain loss' (UL) in haplotype 1 but Intact in haplotype 2.
+
+TOGA_assemblyStats.py, can merge different assemblies, using a precedence map: I>PI>UL>L>M>PM>PG>abs, to keep the "best" class for a given gene out of a range of TOGA runs:
+```shell
+./TOGA_assemblyStats.py ${TOGA_DIRS_FILE} -m merge
+```
+
+This will output a file named ${TOGA_DIRS_FILE}\_merge.tsv with the same structure as a loss_summ_data.tsv file for genes and transcripts
+(but not projections of course, which are run-specific).
+
+If for some reason you want to change the precedence map (for example, to focus on how many genes are ever part of an assembly gap), 
+you can set the parameter -pre/--precedence like so:
+
+```shell
+./TOGA_assemblyStats.py ${TOGA_DIRS_FILE} -m merge -pre M#PM#PG#abs#I#PI#UL#L
+```
+
+Note that the ouputs, with the suffix \_merge.tsv, can be renamed loss_summ_data.tsv and put in a directory, to act as the output of a fictional TOGA run.
+This can be useful when using the same script as outlined in the previous section to get summary statistics.
 
 ## Citation
 
